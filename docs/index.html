@@ -151,7 +151,7 @@
   <section class="card hero-grid">
     <div>
       <h2>From glass plate to color</h2>
-      <p>I split each plate into B, G, R thirds, align G and R to B, then stack into RGB. For small JPGs I use single scale with NCC on a cropped interior. For large TIFFs I switch to a coarse to fine pyramid that refines a small window at each level. After alignment I apply a 5 to 95 percentile contrast stretch and a simple gray world white balance.</p>
+      <p>I split each plate into B, G, R thirds, align G and R to B, then stack into RGB. For small JPGs I use single scale with NCC on a cropped interior. For large TIFs I switch to a coarse to fine pyramid that refines a small window at each level. After alignment I apply a 5 to 95 percentile contrast stretch and a simple gray world white balance.</p>
       <div class="frame">
         <figure class="ba" id="heroBA" style="--pos:50%">
           <img id="heroBefore" class="left" src="assets/baseline/icon.jpg" alt="before baseline">
@@ -181,7 +181,7 @@
     <h2>What I built and how I got it to work</h2>
     <p><strong>icon.</strong> NCC on a 10 to 15 percent interior produced a clean alignment. The border crop matters because the colored edges otherwise bias the score.</p>
     <p><strong>three_generations.</strong> After alignment the image was magenta. I used gray world white balance: compute the mean of each channel, scale each channel by mean(all) / mean(channel), then clip to [0,1].</p>
-    <p><strong>emir.</strong> TIFF with large channel brightness differences. L2 on raw pixels failed. NCC helped but still got pulled by borders. A pyramid search found the displacement fast. Seven levels with a window of five worked across images. Fewer levels missed the coarse shift. Too many levels drifted.</p>
+    <p><strong>emir.</strong> TIF with large channel brightness differences. L2 on raw pixels failed. NCC helped but still got pulled by borders. A pyramid search found the displacement fast. Seven levels with a window of five worked across images. Fewer levels missed the coarse shift. Too many levels drifted.</p>
   </section>
 
   <!-- EMIR PROGRESSION -->
@@ -191,7 +191,7 @@
     <div class="frame fail card">
       <h3>1) L2 on full frames</h3>
       <p>I started with a brute-force single scale using the L2 metric
-        (<a href="#formulaRef">see formula reference ↗</a>). L2 compares raw intensity differences and is very sensitive to bright borders and cross-channel brightness. The best score landed at the wrong shift and color fringes appeared. With no search window or pyramid, the full TIFF brute force took about <strong>55 minutes</strong> for Emir.</p>
+        (<a href="#formulaRef">see formula reference ↗</a>). L2 compares raw intensity differences and is very sensitive to bright borders and cross-channel brightness. The best score landed at the wrong shift and color fringes appeared. With no search window or pyramid, the full TIF brute force took about <strong>55 minutes</strong> for Emir.</p>
       <a class="link" href="assets/failures/emir__fail_metric_L2_nocrop.jpg" target="_blank" rel="noopener">Open full image ↗</a>
       <img src="assets/failures/emir__fail_metric_L2_nocrop.jpg" alt="emir L2 full-frame failure" style="width:100%;display:block;margin-top:8px">
     </div>
@@ -214,7 +214,7 @@
     <!-- 3.5: NCC with correct crop but slow -->
     <div class="frame card">
       <h3>3.5 NCC with correct interior crop (looks right, too slow)</h3>
-      <p>Cropping to the interior \( (1-2f)H \times (1-2f)W \) with \( f \approx 0.15 \) removed the border bias and the alignment looked right. On the full-resolution TIFF, though, a wide single-scale search still meant evaluating many candidate shifts over millions of pixels. This took about <strong>3 minutes</strong> for Emir, so I moved to a pyramid.</p>
+      <p>Cropping to the interior \( (1-2f)H \times (1-2f)W \) with \( f \approx 0.15 \) removed the border bias and the alignment looked right. On the full-resolution TIF, though, a wide single-scale search still meant evaluating many candidate shifts over millions of pixels. This took about <strong>3 minutes</strong> for Emir, so I moved to a pyramid.</p>
       <a class="link" href="assets/failures/ncc_crop_too_long/emir_took_too_long.jpg" target="_blank" rel="noopener">Open cropped NCC result (slow) ↗</a>
       <img src="assets/failures/ncc_crop_too_long/emir_took_too_long.jpg" alt="emir NCC cropped but slow" style="width:100%;display:block;margin-top:8px">
     </div>
