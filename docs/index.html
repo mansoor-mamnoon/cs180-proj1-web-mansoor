@@ -8,28 +8,29 @@
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600;700&family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-<!-- MathJax v3: consistent inline and block math, overflow-safe -->
+<!-- MathJax for LaTeX formulas -->
 <script>
   window.MathJax = {
     tex: {
       inlineMath: [['$','$'], ['\\(','\\)']],
-      displayMath: [['\\[','\\]']]
+      displayMath: [['\\[','\\]'], ['$$','$$']],
+      packages: {'[+]': ['ams','textmacros']}
     },
-    options: { renderActions: { addMenu: [] } }
+    svg:{fontCache:'global'}
   };
 </script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 
 <style>
   :root{
     --ink:#0d1b2a; --ink-2:#1b263b;
     --paper:#f7efe3; --paper-2:#f1e7d7;
-    --accent:#c79a37; --frame:#e2d3bf; 
+    --accent:#c79a37; --frame:#e2d3bf;
   }
   html,body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.55}
   .wrap{max-width:1180px;margin:0 auto;padding:20px}
   header{background:linear-gradient(180deg,#174b7b 0%, #0f3a64 70%);color:#fff;border-bottom:4px solid var(--accent)}
-  header .wrap{padding:36px 20px 28px}
+  header .wrap{padding:36px 20px 28px; text-align:center}
   h1{font-size:44px;margin:0 0 6px;font-weight:800}
   .sub{opacity:.95;font-size:16px;margin-bottom:12px}
   .pill{display:inline-block;background:#103456;color:#e8f0fa;border:1px solid #2f5f91;border-radius:20px;padding:8px 14px;font-size:14px}
@@ -78,12 +79,8 @@
   footer .wrap{padding:18px 20px}
   .link{color:#0f3a64;text-decoration:underline}
   code{background:#fff;padding:2px 6px;border-radius:6px;border:1px solid #e6dac7}
-
-  /* MathJax overflow guards */
-  mjx-container{max-width:100%!important;overflow-x:auto;overflow-y:hidden;}
-  mjx-container[display="true"]{display:block;margin:.35rem 0 .6rem;}
-  .math-block{overflow-x:auto;}
-  .math-inline mjx-container{display:inline-block!important;}
+  /* contain MathJax inside cards */
+  mjx-container[jax="SVG"]{max-width:100%;overflow-x:auto;overflow-y:hidden}
 </style>
 </head>
 <body>
@@ -91,7 +88,7 @@
 <header>
   <div class="wrap">
     <h1>Colorizing Russia • CS180 Project 1</h1>
-    <div class="sub">Mansoor Mamnoon · Fall 2025 · Intro to Computer Vision and Computational Photography</div>
+    <div class="sub">Ansor Mamnoon · Fall 2025 · Intro to Computer Vision and Computational Photography</div>
     <div class="pill">Split B, G, R plates, align with single scale and with a pyramid, then add white balance and contrast. Results and timings are below.</div>
   </div>
 </header>
@@ -141,58 +138,45 @@
 
     <div class="frame fail card">
       <h3>1) L2 on full frames</h3>
-      <p><strong>What I did.</strong> Brute force single scale using the L2 distance. On a cropped interior region \( \Omega \) I minimize
-      \[
-        L2(A,B)=\sum_{(x,y)\in\Omega}\big(A(x,y)-B(x,y)\big)^2.
-      \]
-      </p>
-      <p><strong>What broke.</strong> Borders and cross channel brightness dominate squared error, so the best score sits at the wrong location and the interior shows color fringes.</p>
-      <p class="note"><strong>Timing note.</strong> Before I introduced any search window, scanning the full displacement grid at full resolution took <strong>about 55 minutes</strong> for <em>emir.tif</em> on my machine.</p>
+      <p>I started with a brute-force single scale using the L2 metric
+        (<a href="#formulaRef">see formula reference ↗</a>). L2 compares raw intensity differences and is very sensitive to bright borders and cross-channel brightness. The best score landed at the wrong shift and color fringes appeared. With no search window or pyramid, the full TIFF brute force took about <strong>55 minutes</strong> for Emir.</p>
       <a class="link" href="assets/failures/emir__fail_metric_L2_nocrop.jpg" target="_blank" rel="noopener">Open full image ↗</a>
       <img src="assets/failures/emir__fail_metric_L2_nocrop.jpg" alt="emir L2 full-frame failure" style="width:100%;display:block;margin-top:8px">
     </div>
 
     <div class="frame fail card">
       <h3>2) Overcrop with L2</h3>
-      <p><strong>Change.</strong> I tried removing a big fixed margin first to avoid borders.</p>
-      <p><strong>Result.</strong> Overcropping ate useful content and reduced overlap. The search bounced and drifted.</p>
+      <p>To fight that border bias I cut away a wide margin first. It also removed real structure, reduced overlap, and made the search unstable. The result looked plausible numerically but was still misaligned.</p>
       <a class="link" href="assets/failures/emir__fail_autocrop_over_FIXED.jpg" target="_blank" rel="noopener">Open full image ↗</a>
       <img src="assets/failures/emir__fail_autocrop_over_FIXED.jpg" alt="emir L2 overcrop" style="width:100%;display:block;margin-top:8px">
     </div>
 
     <div class="frame fail card">
       <h3>3) NCC without a crop</h3>
-      <p><strong>Change.</strong> Switched to NCC to reduce brightness bias. I maximize
-      \[
-        \operatorname{NCC}(A,B)=\frac{\sum_{\Omega}(A-\bar A)(B-\bar B)}
-        {\sqrt{\sum_{\Omega}(A-\bar A)^2}\,\sqrt{\sum_{\Omega}(B-\bar B)^2}+\varepsilon}.
-      \]
-      </p>
-      <p><strong>Result.</strong> Better than L2, but borders still pulled the maximum. Lesson learned: use an interior crop, then deal with search range.</p>
+      <p>I switched to normalized cross-correlation (NCC)
+        (<a href="#formulaRef">see formula reference ↗</a>), which normalizes mean and variance. That helped, yet without cropping the interior the tinted borders still pulled the correlation peak.</p>
       <a class="link" href="assets/failures/emir__fail_metric_NCC_nocrop.jpg" target="_blank" rel="noopener">Open full image ↗</a>
       <img src="assets/failures/emir__fail_metric_NCC_nocrop.jpg" alt="emir NCC no-crop" style="width:100%;display:block;margin-top:8px">
     </div>
 
-    <!-- NEW: 3.5 NCC with correct crop but too slow -->
+    <!-- 3.5: NCC with correct crop but slow -->
     <div class="frame card">
-      <h3>3.5) NCC with correct interior crop (looks right, too slow)</h3>
-      <p><strong>What I fixed.</strong> I scored NCC only on the interior \( (1-2f)H\times(1-2f)W \) with \( f\approx0.15 \), which removed border bias and produced a visually correct alignment.</p>
-      <p class="note"><strong>Why it was a problem.</strong> On the full-resolution TIFF I still searched a wide window at single scale. After I restricted the search to about ±15 px and used NCC on the cropped interior, the time dropped from the raw 55-minute brute force to <strong>about 3 minutes</strong> for Emir on my machine. That pushed me to a <em>pyramid</em> so I could find a coarse offset cheaply and refine locally.</p>
+      <h3>3.5 NCC with correct interior crop (looks right, too slow)</h3>
+      <p>Cropping to the interior \( (1-2f)H \times (1-2f)W \) with \( f \approx 0.15 \) removed the border bias and the alignment looked right. On the full-resolution TIFF, though, a wide single-scale search still meant evaluating many candidate shifts over millions of pixels. This took about <strong>3 minutes</strong> for Emir, so I moved to a pyramid.</p>
       <a class="link" href="assets/failures/ncc_crop_too_long/emir_took_too_long.jpg" target="_blank" rel="noopener">Open cropped NCC result (slow) ↗</a>
       <img src="assets/failures/ncc_crop_too_long/emir_took_too_long.jpg" alt="emir NCC cropped but slow" style="width:100%;display:block;margin-top:8px">
     </div>
 
     <div class="frame card">
       <h3>4) Pyramid search baseline</h3>
-      <p>I built a pyramid, searched coarsely at the smallest image, scaled the offset up each level, and refined inside a small window. My first try used 4 levels with a window of 15. It was correct but slow, around 50 s for Emir on my machine.</p>
-      <p class="note">Adding a ±15 px search window with NCC made it minutes instead of 55 minutes. The pyramid made the full TIFF practical.</p>
+      <p>I built a pyramid: estimate offsets on a coarse downsampled image and refine at each higher resolution. With 4 levels and a window of 15, it was correct but slow at about 50 s for Emir.</p>
       <a class="link" href="assets/baseline/emir.jpg" target="_blank" rel="noopener">Open baseline full image ↗</a>
       <img src="assets/baseline/emir.jpg" alt="emir baseline pyramid" style="width:100%;display:block;margin-top:8px">
     </div>
 
     <div class="frame card">
       <h3>5) Final pyramid: 7 levels, window 5</h3>
-      <p>Two levels missed the gross displacement. Ten or more levels drifted on noise. Seven levels with a window of five was reliable across the dataset and kept runtimes reasonable.</p>
+      <p>Two levels missed the coarse displacement. Ten or more drifted. Seven levels with a window of five worked across the dataset and kept runtimes reasonable, so that became the final method for Emir.</p>
       <a class="link" href="assets/all/emir.jpg" target="_blank" rel="noopener">Open final aligned full image ↗</a>
       <img src="assets/all/emir.jpg" alt="emir final pyramid L7 W5" style="width:100%;display:block;margin-top:8px">
     </div>
@@ -237,33 +221,53 @@
   </section>
 
   <!-- METHODS QUICK REFERENCE -->
-  <section class="card tight">
+  <section class="card tight" id="formulaRef">
     <h2>Methods in formulas (quick reference)</h2>
     <div class="note">
-      <p><strong>L2 distance.</strong> On a cropped interior region \( \Omega \) I minimize
-      \[
-        \text{L2}(A,B) = \sum_{(x,y)\in \Omega}\big(A(x,y)-B(x,y)\big)^2.
-      \]
-      </p>
+      <p><strong>L2 distance.</strong></p>
+      <div>
+        \[
+          \text{L2}(A,B)=\sum_{(x,y)\in \Omega}\big(A(x,y)-B(x,y)\big)^2
+        \]
+      </div>
 
-      <p><strong>Normalized cross-correlation (NCC).</strong> I maximize
-      \[
-        \text{NCC}(A,B) = \frac{\sum\limits_{\Omega}(A-\bar A)(B-\bar B)}
-        {\sqrt{\sum\limits_{\Omega}(A-\bar A)^2}\,\sqrt{\sum\limits_{\Omega}(B-\bar B)^2}+\varepsilon}.
-      \]
-      </p>
+      <p><strong>Normalized cross-correlation (NCC).</strong></p>
+      <div>
+        \[
+          \text{NCC}(A,B)=
+          \frac{\sum\limits_{\Omega}(A-\bar A)(B-\bar B)}
+               {\sqrt{\sum\limits_{\Omega}(A-\bar A)^2}\,\sqrt{\sum\limits_{\Omega}(B-\bar B)^2}+\varepsilon}
+        \]
+      </div>
 
-      <p><strong>Gray-world white balance.</strong> With per-channel means \(m_R,m_G,m_B\) and \(m=\tfrac{m_R+m_G+m_B}{3}\), I scale each channel \(c\in\{R,G,B\}\) by \(\alpha_c = m/m_c\) and clip to \([0,1]\):
-      \[
-        I'_c = \operatorname{clip}(\alpha_c\, I_c,\;0,1).
-      \]
-      </p>
+      <p><strong>Gray-world white balance.</strong></p>
+      <div>
+        \[
+          I'_c=\operatorname{clip}(\alpha_c\,I_c,\,0,1),\qquad
+          \alpha_c=\frac{m}{m_c},\qquad
+          m=\tfrac{m_R+m_G+m_B}{3}
+        \]
+      </div>
 
-      <p><strong>Percentile contrast.</strong> For each channel, let \(p_5,p_{95}\) be the 5th and 95th percentiles. I rescale linearly:
-      \[
-        I''_c = \operatorname{clip}\!\left(\frac{I'_c - p_5}{p_{95}-p_5},\,0,\,1\right).
-      \]
-      </p>
+      <p><strong>Percentile contrast.</strong></p>
+      <div>
+        \[
+          I''_c=\operatorname{clip}\!\left(\frac{I'_c-p_5}{p_{95}-p_5},\,0,1\right)
+        \]
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:14px">
+      <h3 style="margin-top:0">What the symbols mean</h3>
+      <ul>
+        <li>$A,B$ — two image channels being compared (e.g. Blue vs Red).</li>
+        <li>$\Omega$ — cropped interior region (borders excluded).</li>
+        <li>$\bar A,\bar B$ — mean intensity of each channel.</li>
+        <li>$m_R,m_G,m_B$ — average intensity of R, G, B channels.</li>
+        <li>$p_5,p_{95}$ — 5th and 95th percentile values per channel.</li>
+        <li>$\varepsilon$ — very small stabilizer to avoid divide by zero in NCC.</li>
+      </ul>
+      <p><strong>Why these formulas?</strong> L2 highlights raw pixel error but is brightness sensitive. NCC normalizes out brightness and contrast. Gray-world assumes the average scene is gray and balances channels. Percentile contrast expands midtones while clipping outliers.</p>
     </div>
   </section>
 
@@ -386,7 +390,7 @@ const CONTRAST_SRC = {
   three_generations:"assets/contrast_only/three_generations.jpg",
   tobolsk:"assets/contrast_only/tobolsk.jpg",
 };
-// Offsets + runtimes (after-features times set higher for emir, icon, self_portrait as requested)
+// Offsets + runtimes
 const BASELINE_ROWS = [
   ["cathedral",         [ 2,  5], [ 3, 12], 0.42],
   ["church",            [ 4, 25], [-4, 58], 9.21],
