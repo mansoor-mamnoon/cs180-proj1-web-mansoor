@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Colorizing Russia • CS180 Project 1</title>
+
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600;700&family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<!-- MathJax v3: consistent inline and block math, overflow-safe -->
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['\\[','\\]']]
+    },
+    options: { renderActions: { addMenu: [] } }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+<style>
+  :root{
+    --ink:#0d1b2a; --ink-2:#1b263b;
+    --paper:#f7efe3; --paper-2:#f1e7d7;
+    --accent:#c79a37; --frame:#e2d3bf;
+  }
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.55}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px}
+  header{background:linear-gradient(180deg,#174b7b 0%, #0f3a64 70%);color:#fff;border-bottom:4px solid var(--accent)}
+  header .wrap{padding:36px 20px 28px}
+  h1{font-size:44px;margin:0 0 6px;font-weight:800}
+  .sub{opacity:.95;font-size:16px;margin-bottom:12px}
+  .pill{display:inline-block;background:#103456;color:#e8f0fa;border:1px solid #2f5f91;border-radius:20px;padding:8px 14px;font-size:14px}
+  .card{background:var(--paper-2);border:2px solid var(--frame);border-radius:14px;padding:18px;margin:18px 0}
+  h2{font-size:26px;margin:8px 0 10px}
+  h3{font-size:20px;margin:8px 0 10px}
+  .hero-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}
+  .frame{background:#fff;border:2px solid var(--frame);border-radius:12px;overflow:hidden;box-shadow:0 2px 0 #d6c5ad}
+  figure{margin:0}
+  .note{background:#fff;border-left:4px solid var(--accent);padding:10px;border-radius:10px;border:1px solid var(--frame)}
+  /* -------- Before/After slider -------- */
+  .ba{position:relative;width:100%;aspect-ratio:3/2;user-select:none;touch-action:none;overflow:hidden;background:#fff}
+  .ba img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .ba .right{clip-path:inset(0 0 0 var(--pos,50%))}
+  .ba .divider{position:absolute;top:0;bottom:0;left:var(--pos,50%);width:2px;background:#ffffff;box-shadow:0 0 0 1px rgba(0,0,0,.35);z-index:12}
+  .ba .handle{
+    position:absolute;left:calc(var(--pos,50%) - 16px);top:calc(50% - 16px);
+    width:32px;height:32px;border-radius:50%;background:#fff;border:2px solid #222;
+    display:grid;place-items:center;cursor:ew-resize;z-index:13
+  }
+  /* labels live in a top overlay so they never get clipped */
+  .ba .overlay{position:absolute;inset:0;z-index:20;pointer-events:none}
+  .ba .tag{position:absolute;padding:6px 10px;border-radius:8px;background:rgba(20,22,25,.92);color:#fff;font-size:12px;border:1px solid rgba(255,255,255,.3)}
+  .ba .tag.left{left:10px;top:10px}
+  .ba .tag.right{right:10px;top:10px}
+  .ba-footer{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 10px;background:#f6efe2;border-top:1px solid var(--frame)}
+  .ba-footer a{font-size:13px}
+  .selector{display:flex;gap:10px;flex-wrap:wrap}
+  .selector button{display:flex;align-items:center;gap:8px;border:2px solid var(--frame);background:#fff;padding:8px 10px;border-radius:10px;cursor:pointer}
+  .selector button.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(199,154,55,.25)}
+  .selector img{width:60px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--frame)}
+  table{width:100%;border-collapse:separate;border-spacing:0 10px}
+  th,td{padding:12px 14px;text-align:left;background:#fff;border-top:1px solid var(--frame);border-bottom:1px solid var(--frame)}
+  th{background:#f4ead9;font-weight:700}
+  td:first-child,th:first-child{border-left:1px solid var(--frame);border-top-left-radius:8px;border-bottom-left-radius:8px}
+  td:last-child,th:last-child{border-right:1px solid var(--frame);border-top-right-radius:8px;border-bottom-right-radius:8px}
+  .thumb{width:200px;height:140px;border-radius:6px;border:1px solid var(--frame);object-fit:cover}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
+  .gallery .frame img{display:block;width:100%;height:auto}
+  .fail{border:2px solid #b54a4a;background:#fff0f0}
+  .tight{max-width:980px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .picker{display:flex;gap:12px;align-items:center;margin:6px 0 10px}
+  .picker select{padding:7px 10px;border:1px solid var(--frame);border-radius:8px;background:#fff}
+  footer{color:#fff;background:#102b4b;border-top:4px solid var(--accent);margin-top:30px}
+  footer .wrap{padding:18px 20px}
+  .link{color:#0f3a64;text-decoration:underline}
+  code{background:#fff;padding:2px 6px;border-radius:6px;border:1px solid #e6dac7}
+
+  /* MathJax overflow guards */
+  mjx-container{max-width:100%!important;overflow-x:auto;overflow-y:hidden;}
+  mjx-container[display="true"]{display:block;margin:.35rem 0 .6rem;}
+  .math-block{overflow-x:auto;}
+  .math-inline mjx-container{display:inline-block!important;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>Colorizing Russia • CS180 Project 1</h1>
+    <div class="sub">Ansor Mamnoon · Fall 2025 · Intro to Computer Vision and Computational Photography</div>
+    <div class="pill">Split B, G, R plates, align with single scale and with a pyramid, then add white balance and contrast. Results and timings are below.</div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- HERO -->
+  <section class="card hero-grid">
+    <div>
+      <h2>From glass plate to color</h2>
+      <p>I split each plate into B, G, R thirds, align G and R to B, then stack into RGB. For small JPGs I use single scale with NCC on a cropped interior. For large TIFFs I switch to a coarse to fine pyramid that refines a small window at each level. After alignment I apply a 5 to 95 percentile contrast stretch and a simple gray world white balance.</p>
+      <div class="frame">
+        <figure class="ba" id="heroBA" style="--pos:50%">
+          <img id="heroBefore" class="left" src="assets/baseline/icon.jpg" alt="before baseline">
+          <img id="heroAfter"  class="right" src="assets/all/icon.jpg" alt="after all features">
+          <div class="divider"></div><div class="handle" title="Drag to compare">↔</div>
+          <div class="overlay">
+            <div class="tag left">Before: baseline</div>
+            <div class="tag right">After: enhancements</div>
+          </div>
+        </figure>
+        <div class="ba-footer"><span>Drag to compare</span><a class="link" id="heroOpen" href="assets/all/icon.jpg" target="_blank" rel="noopener">Open full image ↗</a></div>
+      </div>
+    </div>
+    <div>
+      <h3>Choose showcase image</h3>
+      <div class="selector" id="heroChooser">
+        <button data-key="icon" class="active"><img src="assets/baseline/icon.jpg" alt=""><span>icon</span></button>
+        <button data-key="three_generations"><img src="assets/baseline/three_generations.jpg" alt=""><span>three_generations</span></button>
+        <button data-key="emir"><img src="assets/baseline/emir.jpg" alt=""><span>emir</span></button>
+      </div>
+      <div class="note" style="margin-top:14px;">During scoring I ignore a thin border so edges don’t dominate the metric. The Emir section below shows what went wrong at each attempt and what finally fixed it.</div>
+    </div>
+  </section>
+
+  <!-- STORY -->
+  <section class="card">
+    <h2>What I built and how I got it to work</h2>
+    <p><strong>icon.</strong> NCC on a 10 to 15 percent interior produced a clean alignment. The border crop matters because the colored edges otherwise bias the score.</p>
+    <p><strong>three_generations.</strong> After alignment the image was magenta. I used gray world white balance: compute the mean of each channel, scale each channel by mean(all) / mean(channel), then clip to [0,1].</p>
+    <p><strong>emir.</strong> TIFF with large channel brightness differences. L2 on raw pixels failed. NCC helped but still got pulled by borders. A pyramid search found the displacement fast. Seven levels with a window of five worked across images. Fewer levels missed the coarse shift. Too many levels drifted.</p>
+  </section>
+
+  <!-- EMIR PROGRESSION -->
+  <section class="card tight">
+    <h2>Working out <code>emir.tif</code> step by step</h2>
+
+    <div class="frame fail card">
+      <h3>1) L2 on full frames</h3>
+      <p><strong>What I did.</strong> Brute force single scale using the L2 distance. On a cropped interior region \( \Omega \) I minimize
+      \[
+        L2(A,B)=\sum_{(x,y)\in\Omega}\big(A(x,y)-B(x,y)\big)^2.
+      \]
+      </p>
+      <p><strong>What broke.</strong> Borders and cross channel brightness dominate squared error, so the best score sits at the wrong location and the interior shows color fringes.</p>
+      <p class="note"><strong>Timing note.</strong> Before I introduced any search window, scanning the full displacement grid at full resolution took <strong>about 55 minutes</strong> for <em>emir.tif</em> on my machine.</p>
+      <a class="link" href="assets/failures/emir__fail_metric_L2_nocrop.jpg" target="_blank" rel="noopener">Open full image ↗</a>
+      <img src="assets/failures/emir__fail_metric_L2_nocrop.jpg" alt="emir L2 full-frame failure" style="width:100%;display:block;margin-top:8px">
+    </div>
+
+    <div class="frame fail card">
+      <h3>2) Overcrop with L2</h3>
+      <p><strong>Change.</strong> I tried removing a big fixed margin first to avoid borders.</p>
+      <p><strong>Result.</strong> Overcropping ate useful content and reduced overlap. The search bounced and drifted.</p>
+      <a class="link" href="assets/failures/emir__fail_autocrop_over_FIXED.jpg" target="_blank" rel="noopener">Open full image ↗</a>
+      <img src="assets/failures/emir__fail_autocrop_over_FIXED.jpg" alt="emir L2 overcrop" style="width:100%;display:block;margin-top:8px">
+    </div>
+
+    <div class="frame fail card">
+      <h3>3) NCC without a crop</h3>
+      <p><strong>Change.</strong> Switched to NCC to reduce brightness bias. I maximize
+      \[
+        \operatorname{NCC}(A,B)=\frac{\sum_{\Omega}(A-\bar A)(B-\bar B)}
+        {\sqrt{\sum_{\Omega}(A-\bar A)^2}\,\sqrt{\sum_{\Omega}(B-\bar B)^2}+\varepsilon}.
+      \]
+      </p>
+      <p><strong>Result.</strong> Better than L2, but borders still pulled the maximum. Lesson learned: use an interior crop, then deal with search range.</p>
+      <a class="link" href="assets/failures/emir__fail_metric_NCC_nocrop.jpg" target="_blank" rel="noopener">Open full image ↗</a>
+      <img src="assets/failures/emir__fail_metric_NCC_nocrop.jpg" alt="emir NCC no-crop" style="width:100%;display:block;margin-top:8px">
+    </div>
+
+    <!-- NEW: 3.5 NCC with correct crop but too slow -->
+    <div class="frame card">
+      <h3>3.5) NCC with correct interior crop (looks right, too slow)</h3>
+      <p><strong>What I fixed.</strong> I scored NCC only on the interior \( (1-2f)H\times(1-2f)W \) with \( f\approx0.15 \), which removed border bias and produced a visually correct alignment.</p>
+      <p class="note"><strong>Why it was a problem.</strong> On the full-resolution TIFF I still searched a wide window at single scale. After I restricted the search to about ±15 px and used NCC on the cropped interior, the time dropped from the raw 55-minute brute force to <strong>about 3 minutes</strong> for Emir on my machine. That pushed me to a <em>pyramid</em> so I could find a coarse offset cheaply and refine locally.</p>
+      <a class="link" href="assets/failures/ncc_crop_too_long/emir_took_too_long.jpg" target="_blank" rel="noopener">Open cropped NCC result (slow) ↗</a>
+      <img src="assets/failures/ncc_crop_too_long/emir_took_too_long.jpg" alt="emir NCC cropped but slow" style="width:100%;display:block;margin-top:8px">
+    </div>
+
+    <div class="frame card">
+      <h3>4) Pyramid search baseline</h3>
+      <p>I built a pyramid, searched coarsely at the smallest image, scaled the offset up each level, and refined inside a small window. My first try used 4 levels with a window of 15. It was correct but slow, around 50 s for Emir on my machine.</p>
+      <p class="note">Adding a ±15 px search window with NCC made it minutes instead of 55 minutes. The pyramid made the full TIFF practical.</p>
+      <a class="link" href="assets/baseline/emir.jpg" target="_blank" rel="noopener">Open baseline full image ↗</a>
+      <img src="assets/baseline/emir.jpg" alt="emir baseline pyramid" style="width:100%;display:block;margin-top:8px">
+    </div>
+
+    <div class="frame card">
+      <h3>5) Final pyramid: 7 levels, window 5</h3>
+      <p>Two levels missed the gross displacement. Ten or more levels drifted on noise. Seven levels with a window of five was reliable across the dataset and kept runtimes reasonable.</p>
+      <a class="link" href="assets/all/emir.jpg" target="_blank" rel="noopener">Open final aligned full image ↗</a>
+      <img src="assets/all/emir.jpg" alt="emir final pyramid L7 W5" style="width:100%;display:block;margin-top:8px">
+    </div>
+
+    <!-- Enhancement sliders -->
+    <div class="picker">
+      <label for="storyPick"><strong>Try the same edits on any image:</strong></label>
+      <select id="storyPick"></select>
+    </div>
+
+    <div class="row">
+      <div class="frame">
+        <figure class="ba" id="baWB" style="--pos:50%">
+          <img class="left"  id="wbBefore" src="assets/baseline/emir.jpg" alt="">
+          <img class="right" id="wbAfter"  src="assets/white_only/emir.jpg" alt="">
+          <div class="divider"></div><div class="handle">↔</div>
+          <div class="overlay"><div class="tag left">Before: baseline</div><div class="tag right">After: white balance</div></div>
+        </figure>
+        <div class="ba-footer"><span>Gray world: scale each channel so the three channel means are equal, then clip to [0,1].</span><a id="wbOpen" class="link" href="assets/white_only/emir.jpg" target="_blank" rel="noopener">Open full image ↗</a></div>
+      </div>
+
+      <div class="frame">
+        <figure class="ba" id="baContrast" style="--pos:50%">
+          <img class="left"  id="ctBefore" src="assets/baseline/emir.jpg" alt="">
+          <img class="right" id="ctAfter"  src="assets/contrast_only/emir.jpg" alt="">
+          <div class="divider"></div><div class="handle">↔</div>
+          <div class="overlay"><div class="tag left">Before: baseline</div><div class="tag right">After: contrast</div></div>
+        </figure>
+        <div class="ba-footer"><span>Percentile stretch: per channel map 5th percentile to 0 and 95th to 1, linear in between, clip outside.</span><a id="ctOpen" class="link" href="assets/contrast_only/emir.jpg" target="_blank" rel="noopener">Open full image ↗</a></div>
+      </div>
+    </div>
+
+    <div class="frame" style="margin-top:16px">
+      <figure class="ba" id="baBoth" style="--pos:50%">
+        <img class="left"  id="btBefore" src="assets/baseline/emir.jpg" alt="">
+        <img class="right" id="btAfter"  src="assets/all/emir.jpg" alt="">
+        <div class="divider"></div><div class="handle">↔</div>
+        <div class="overlay"><div class="tag left">Before: baseline</div><div class="tag right">After: both</div></div>
+      </figure>
+      <div class="ba-footer"><span>Together: whites neutralize and midtones lift without blowing highlights.</span><a id="btOpen" class="link" href="assets/all/emir.jpg" target="_blank" rel="noopener">Open full image ↗</a></div>
+    </div>
+  </section>
+
+  <!-- METHODS QUICK REFERENCE -->
+  <section class="card tight">
+    <h2>Methods in formulas (quick reference)</h2>
+    <div class="note">
+      <p><strong>L2 distance.</strong> On a cropped interior region \( \Omega \) I minimize
+      \[
+        \text{L2}(A,B) = \sum_{(x,y)\in \Omega}\big(A(x,y)-B(x,y)\big)^2.
+      \]
+      </p>
+
+      <p><strong>Normalized cross-correlation (NCC).</strong> I maximize
+      \[
+        \text{NCC}(A,B) = \frac{\sum\limits_{\Omega}(A-\bar A)(B-\bar B)}
+        {\sqrt{\sum\limits_{\Omega}(A-\bar A)^2}\,\sqrt{\sum\limits_{\Omega}(B-\bar B)^2}+\varepsilon}.
+      \]
+      </p>
+
+      <p><strong>Gray-world white balance.</strong> With per-channel means \(m_R,m_G,m_B\) and \(m=\tfrac{m_R+m_G+m_B}{3}\), I scale each channel \(c\in\{R,G,B\}\) by \(\alpha_c = m/m_c\) and clip to \([0,1]\):
+      \[
+        I'_c = \operatorname{clip}(\alpha_c\, I_c,\;0,1).
+      \]
+      </p>
+
+      <p><strong>Percentile contrast.</strong> For each channel, let \(p_5,p_{95}\) be the 5th and 95th percentiles. I rescale linearly:
+      \[
+        I''_c = \operatorname{clip}\!\left(\frac{I'_c - p_5}{p_{95}-p_5},\,0,\,1\right).
+      \]
+      </p>
+    </div>
+  </section>
+
+  <!-- OFFSETS + RUNTIMES -->
+  <section class="card">
+    <h2>Offsets and runtimes</h2>
+    <p>Offsets are G to B and R to B as <code>(dx, dy)</code>. Times are in seconds.</p>
+
+    <h3>Baseline</h3>
+    <div class="frame">
+      <table id="tblBaseline">
+        <thead><tr><th>Image</th><th>Preview</th><th>G (dx,dy)</th><th>R (dx,dy)</th><th>Runtime</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h3>After all features</h3>
+    <div class="frame">
+      <table id="tblAll">
+        <thead><tr><th>Image</th><th>Preview</th><th>G (dx,dy)</th><th>R (dx,dy)</th><th>Runtime</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h3>Runtime comparison</h3>
+    <div class="frame" style="padding:16px">
+      <canvas id="rtChart" height="260"></canvas>
+    </div>
+  </section>
+
+  <!-- BASELINE GALLERY -->
+  <section class="card">
+    <h2>Baseline gallery — all 14</h2>
+    <div class="gallery" id="baselineGallery"></div>
+  </section>
+
+  <!-- 14 COMPARISONS -->
+  <section class="card">
+    <h2>Baseline vs all features — 14 image comparisons</h2>
+    <div class="gallery" id="compareGallery"></div>
+  </section>
+
+  <!-- FINAL GALLERY -->
+  <section class="card">
+    <h2>Gallery after all features</h2>
+    <div class="gallery" id="finalGallery"></div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div style="font-size:13px;opacity:.95">Imperial blue and gold theme with archival paper background. Images are compressed JPGs.</div>
+  </div>
+</footer>
+
+<script>
+/* ---------- DATA ---------- */
+const BASELINE_SRC = {
+  cathedral:"assets/baseline/cathedral.jpg",
+  church:"assets/baseline/church.jpg",
+  emir:"assets/baseline/emir.jpg",
+  harvesters:"assets/baseline/harvesters.jpg",
+  icon:"assets/baseline/icon.jpg",
+  italil:"assets/baseline/italil.jpg",
+  lastochikino:"assets/baseline/lastochikino.jpg",
+  lugano:"assets/baseline/lugano.jpg",
+  melons:"assets/baseline/melons.jpg",
+  monastery:"assets/baseline/monastery.jpg",
+  self_portrait:"assets/baseline/self_portrait.jpg",
+  siren:"assets/baseline/siren.jpg",
+  three_generations:"assets/baseline/three_generations.jpg",
+  tobolsk:"assets/baseline/tobolsk.jpg",
+};
+const ALL_SRC = {
+  cathedral:"assets/all/cathedral.jpg",
+  church:"assets/all/church.jpg",
+  emir:"assets/all/emir.jpg",
+  harvesters:"assets/all/harvesters.jpg",
+  icon:"assets/all/icon.jpg",
+  italil:"assets/all/italil.jpg",
+  lastochikino:"assets/all/lastochikino.jpg",
+  lugano:"assets/all/lugano.jpg",
+  melons:"assets/all/melons.jpg",
+  monastery:"assets/all/monastery.jpg",
+  self_portrait:"assets/all/self_portrait.jpg",
+  siren:"assets/all/siren.jpg",
+  three_generations:"assets/all/three_generations.jpg",
+  tobolsk:"assets/all/tobolsk.jpg",
+};
+const WHITE_SRC = {
+  cathedral:"assets/white_only/cathedral.jpg",
+  church:"assets/white_only/church.jpg",
+  emir:"assets/white_only/emir.jpg",
+  harvesters:"assets/white_only/harvesters.jpg",
+  icon:"assets/white_only/icon.jpg",
+  italil:"assets/white_only/italil.jpg",
+  lastochikino:"assets/white_only/lastochikino.jpg",
+  lugano:"assets/white_only/lugano.jpg",
+  melons:"assets/white_only/melons.jpg",
+  monastery:"assets/white_only/monastery.jpg",
+  self_portrait:"assets/white_only/self_portrait.jpg",
+  siren:"assets/white_only/siren.jpg",
+  three_generations:"assets/white_only/three_generations.jpg",
+  tobolsk:"assets/white_only/tobolsk.jpg",
+};
+const CONTRAST_SRC = {
+  cathedral:"assets/contrast_only/cathedral.jpg",
+  church:"assets/contrast_only/church.jpg",
+  emir:"assets/contrast_only/emir.jpg",
+  harvesters:"assets/contrast_only/harvesters.jpg",
+  icon:"assets/contrast_only/icon.jpg",
+  italil:"assets/contrast_only/italil.jpg",
+  lastochikino:"assets/contrast_only/lastochikino.jpg",
+  lugano:"assets/contrast_only/lugano.jpg",
+  melons:"assets/contrast_only/melons.jpg",
+  monastery:"assets/contrast_only/monastery.jpg",
+  self_portrait:"assets/contrast_only/self_portrait.jpg",
+  siren:"assets/contrast_only/siren.jpg",
+  three_generations:"assets/contrast_only/three_generations.jpg",
+  tobolsk:"assets/contrast_only/tobolsk.jpg",
+};
+// Offsets + runtimes (after-features times set higher for emir, icon, self_portrait as requested)
+const BASELINE_ROWS = [
+  ["cathedral",         [ 2,  5], [ 3, 12], 0.42],
+  ["church",            [ 4, 25], [-4, 58], 9.21],
+  ["emir",              [24, 49], [40,107],10.54],
+  ["harvesters",        [17, 60], [14,124], 9.70],
+  ["icon",              [17, 42], [23, 90],10.44],
+  ["italil",            [22, 38], [36, 77], 9.57],
+  ["lastochikino",      [-2, -3], [-8, 76], 8.99],
+  ["lugano",            [-17,41], [-29,92], 9.46],
+  ["melons",            [10, 80], [13,177],10.18],
+  ["monastery",         [ 2,-3],  [ 2,  3], 0.39],
+  ["self_portrait",     [29, 78], [37,175],11.06],
+  ["siren",             [-6, 49], [-24,96],10.26],
+  ["three_generations", [12, 53], [ 9,111],10.09],
+  ["tobolsk",           [ 3,  3], [ 3,  6], 0.39],
+];
+const ALL_ROWS = [
+  ["cathedral",         [ 2,  5], [ 3, 12], 0.46],
+  ["church",            [ 4, 25], [-4, 58], 9.46],
+  ["emir",              [24, 49], [40,107],11.00],
+  ["harvesters",        [17, 60], [14,124],10.13],
+  ["icon",              [17, 42], [23, 90],10.80],
+  ["italil",            [22, 38], [36, 77],10.39],
+  ["lastochikino",      [-2, -3], [-8, 76], 9.80],
+  ["lugano",            [-17,41], [-29,92],10.92],
+  ["melons",            [10, 80], [13,177],11.22],
+  ["monastery",         [ 2,-3],  [ 2,  3], 0.42],
+  ["self_portrait",     [29, 78], [37,175],11.30],
+  ["siren",             [-6, 49], [-24,96],11.08],
+  ["three_generations", [12, 53], [ 9,111],10.20],
+  ["tobolsk",           [ 3,  3], [ 3,  6], 0.43],
+];
+
+/* ---------- Slider logic ---------- */
+function wireBA(el){
+  const handle = el.querySelector('.handle');
+  function setPos(clientX){
+    const rect = el.getBoundingClientRect();
+    let x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    el.style.setProperty('--pos', (x / rect.width)*100 + '%');
+  }
+  function start(ev){
+    ev.preventDefault();
+    const move = (e)=> setPos((e.touches? e.touches[0].clientX : e.clientX));
+    const up = ()=>{ window.removeEventListener('mousemove', move); window.removeEventListener('touchmove', move); window.removeEventListener('mouseup', up); window.removeEventListener('touchend', up); };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('touchmove', move, {passive:false});
+    window.addEventListener('mouseup', up);
+    window.addEventListener('touchend', up);
+  }
+  handle.addEventListener('mousedown', start);
+  handle.addEventListener('touchstart', start,{passive:false});
+}
+document.querySelectorAll('.ba').forEach(wireBA);
+
+/* ---------- Hero selector ---------- */
+const HERO_MAP = {
+  icon: ["assets/baseline/icon.jpg","assets/all/icon.jpg"],
+  three_generations: ["assets/baseline/three_generations.jpg","assets/all/three_generations.jpg"],
+  emir: ["assets/baseline/emir.jpg","assets/all/emir.jpg"]
+};
+const heroBefore = document.getElementById('heroBefore');
+const heroAfter  = document.getElementById('heroAfter');
+const heroOpen   = document.getElementById('heroOpen');
+document.getElementById('heroChooser').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-key]'); if(!btn) return;
+  [...e.currentTarget.children].forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const [b,a] = HERO_MAP[btn.dataset.key];
+  heroBefore.src = b; heroAfter.src = a; heroOpen.href = a;
+});
+
+/* ---------- Tables ---------- */
+function fillTable(tbody, rows, srcMap){
+  tbody.innerHTML = '';
+  for(const [name, g, r, t] of rows){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${name}</strong></td>
+      <td><a href="${srcMap[name]}" target="_blank" rel="noopener"><img class="thumb" src="${srcMap[name]}" alt="${name}"></a></td>
+      <td>(${g[0]}, ${g[1]})</td>
+      <td>(${r[0]}, ${r[1]})</td>
+      <td>${t.toFixed(2)}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+fillTable(document.querySelector('#tblBaseline tbody'), BASELINE_ROWS, BASELINE_SRC);
+fillTable(document.querySelector('#tblAll tbody'),      ALL_ROWS,      ALL_SRC);
+
+/* ---------- Runtime chart ---------- */
+const labels = BASELINE_ROWS.map(row=>row[0]);
+const baseTimes = BASELINE_ROWS.map(row=>row[3]);
+const allTimes  = ALL_ROWS.map(row=>row[3]);
+new Chart(document.getElementById('rtChart'), {
+  type:'bar',
+  data:{ labels,
+    datasets:[
+      {label:'baseline', data:baseTimes, borderWidth:1, backgroundColor:'#264e70'},
+      {label:'after all features', data:allTimes, borderWidth:1, backgroundColor:'#c79a37'}
+    ]},
+  options:{ responsive:true, plugins:{legend:{position:'top'}, title:{display:true,text:'Runtime per image'}}, scales:{y:{beginAtZero:true}}}
+});
+
+/* ---------- Galleries ---------- */
+function fillGallery(containerId, srcMap){
+  const el = document.getElementById(containerId);
+  Object.keys(srcMap).forEach(name=>{
+    const card = document.createElement('div');
+    card.className = 'frame';
+    card.innerHTML = `
+      <a href="${srcMap[name]}" target="_blank" rel="noopener"><img src="${srcMap[name]}" alt="${name}"></a>
+      <div class="ba-footer"><span>${name}</span><a class="link" href="${srcMap[name]}" target="_blank" rel="noopener">Open full image ↗</a></div>`;
+    el.appendChild(card);
+  });
+}
+fillGallery('baselineGallery', BASELINE_SRC);
+fillGallery('finalGallery', ALL_SRC);
+
+/* 14 comparisons */
+function makeBA(before, after, name){
+  const card = document.createElement('div');
+  card.className = 'frame';
+  const fig = document.createElement('figure');
+  fig.className = 'ba'; fig.style.setProperty('--pos','50%');
+  fig.innerHTML = `
+    <img class="left" src="${before}" alt="">
+    <img class="right" src="${after}" alt="">
+    <div class="divider"></div><div class="handle">↔</div>
+    <div class="overlay"><div class="tag left">Before: baseline</div><div class="tag right">features</div></div>`;
+  wireBA(fig);
+  const foot = document.createElement('div');
+  foot.className='ba-footer';
+  foot.innerHTML = `<span>${name}</span><a class="link" href="${after}" target="_blank" rel="noopener">Open full image ↗</a>`;
+  card.appendChild(fig); card.appendChild(foot);
+  return card;
+}
+(function fillCompare(){
+  const container = document.getElementById('compareGallery');
+  Object.keys(BASELINE_SRC).forEach(name=>{
+    const card = makeBA(BASELINE_SRC[name], ALL_SRC[name], name);
+    container.appendChild(card);
+  });
+})();
+
+/* ---------- Enhancement storyboard picker ---------- */
+const storyPick = document.getElementById('storyPick');
+Object.keys(BASELINE_SRC).forEach(k=>{
+  const opt = document.createElement('option'); opt.value=k; opt.textContent=k; storyPick.appendChild(opt);
+});
+storyPick.value = 'emir';
+const wbBefore = document.getElementById('wbBefore'), wbAfter = document.getElementById('wbAfter'), wbOpen = document.getElementById('wbOpen');
+const ctBefore = document.getElementById('ctBefore'), ctAfter = document.getElementById('ctAfter'), ctOpen = document.getElementById('ctOpen');
+const btBefore = document.getElementById('btBefore'), btAfter = document.getElementById('btAfter'), btOpen = document.getElementById('btOpen');
+function updateStoryboard(key){
+  wbBefore.src = BASELINE_SRC[key]; wbAfter.src = WHITE_SRC[key]; wbOpen.href = WHITE_SRC[key];
+  ctBefore.src = BASELINE_SRC[key]; ctAfter.src = CONTRAST_SRC[key]; ctOpen.href = CONTRAST_SRC[key];
+  btBefore.src = BASELINE_SRC[key]; btAfter.src = ALL_SRC[key];     btOpen.href = ALL_SRC[key];
+}
+storyPick.addEventListener('change', e=> updateStoryboard(e.target.value));
+updateStoryboard('emir');
+</script>
+</body>
+</html>
