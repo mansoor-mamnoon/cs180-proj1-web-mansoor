@@ -81,6 +81,58 @@
   code{background:#fff;padding:2px 6px;border-radius:6px;border:1px solid #e6dac7}
   /* contain MathJax inside cards */
   mjx-container[jax="SVG"]{max-width:100%;overflow-x:auto;overflow-y:hidden}
+
+  footer a {
+  color: #f3d96b !important;   /* gold tone that matches your accent */
+  text-decoration: underline;
+}
+
+/* ---- Print: keep slider look, preserve navy header, avoid cut-offs ---- */
+/* ---- Print: keep sliders, prevent clipping, keep colors ---- */
+@media print {
+  /* keep header/navy colors in print */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* stack the hero section so text doesn't overlap the image */
+  .hero-grid { grid-template-columns: 1fr !important; }
+
+  /* keep before/after slider with divider & handle centered */
+  .ba {
+    aspect-ratio: 3/2 !important;      /* keep consistent box */
+    overflow: hidden !important;        /* stop bleed into text */
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .ba img {
+    position: absolute !important;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+  .ba .right { clip-path: inset(0 0 0 50%) !important; }  /* 50/50 split */
+  .ba .divider {
+    display: block !important;
+    left: 50% !important;
+    width: 2px !important;
+    z-index: 12 !important;
+  }
+  .ba .handle {
+    display: grid !important;
+    left: calc(50% - 16px) !important;  /* center the knob */
+    top: calc(50% - 16px) !important;
+    z-index: 13 !important;
+  }
+  .ba .overlay { position: absolute !important; } /* keep tags in corners */
+
+  /* prevent math/info cards from breaking awkwardly */
+  .card, .note { page-break-inside: avoid; break-inside: avoid; }
+
+  /* also stack side-by-side rows to avoid cutoffs */
+  .row { grid-template-columns: 1fr !important; }
+}
+
+
 </style>
 </head>
 <body>
@@ -320,9 +372,15 @@
 
 <footer>
   <div class="wrap">
-    <div style="font-size:13px;opacity:.95">Imperial blue and gold theme with archival paper background. Images are compressed JPGs.</div>
+    <div style="font-size:13px;opacity:.95">
+      This PDF is a static snapshot. For the full interactive experience (before/after sliders and hover labels),
+      visit the project site: <a class="link" href="https://mansoor-mamnoon.github.io/cs180-proj1-web-mansoor/" target="_blank" rel="noopener">
+      mansoor-mamnoon.github.io/cs180-proj1-web-mansoor/</a>.
+      Images shown are compressed JPGs.
+    </div>
   </div>
 </footer>
+
 
 <script>
 /* ---------- DATA ---------- */
