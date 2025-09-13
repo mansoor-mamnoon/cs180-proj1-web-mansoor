@@ -210,10 +210,7 @@
 <div class="frame fail card">
   <h3>0) Raw brightness only — compare intensities directly</h3>
   <p>
-    I started by comparing <em>raw brightness</em> between channels (no edge map). In code terms, this is the path where
-    the scoring operates directly on the images without gradients:
-    <code>is_grad = false</code> in <code>the_way_of_pyramids</code>, so
-    <code>im_to_score1 = curr_img1</code> and <code>im_to_score2 = curr_img2</code> before scoring.
+    I started by comparing <em>raw brightness</em> between channels 
   </p>
   <p class="note">
     <strong>Problem:</strong> cross-channel brightness differs a lot in <code>emir.tif</code>. Comparing raw intensities lets illumination/border effects
@@ -248,17 +245,9 @@
     <a href="#formulaRef">methods reference below</a>, but at a high level it’s just measuring how
     quickly intensities change in the x- and y-directions and combining them.
   </p>
-  <p>
-    I also tested a brute-force single scale with the L2 metric. It was still dominated by bright
-    borders and produced wrong shifts with color fringes. On the full Emir TIF, brute force took
-    about <strong>55 minutes</strong>.
-  </p>
   <a class="link" href="assets/failures/emir__fail_metric_L2_nocrop.jpg" target="_blank" rel="noopener">Open full image ↗</a>
   <img src="assets/failures/emir__fail_metric_L2_nocrop.jpg" alt="emir L2 full-frame failure" style="width:100%;display:block;margin-top:8px">
 </div>
-
-
-
   <p>
     I also tried a brute-force single scale using the <strong>L2</strong> metric
     (<a href="#formulaRef">see formula reference ↗</a>). L2 compares raw intensity differences and is very sensitive to
@@ -288,7 +277,7 @@
     <!-- 3.5: NCC with correct crop but slow -->
     <div class="frame card">
       <h3>3.5 NCC with correct interior crop (looks right, too slow)</h3>
-      <p>Cropping to the interior \( (1-2f)H \times (1-2f)W \) with \( f \approx 0.15 \) removed the border bias and the alignment looked right. On the full-resolution TIF, though, a wide single-scale search still meant evaluating many candidate shifts over millions of pixels. This took about <strong>3 minutes</strong> for Emir, so I moved to a pyramid.</p>
+      <p>Cropping to the interior \( (1-2f)H \times (1-2f)W \) with and searching within a window size of 15 pixels up, down, left, and right removed the border bias and the alignment looked right. On the full-resolution TIF, though, a wide single-scale search still meant evaluating many candidate shifts over millions of pixels. This took about <strong>3 minutes</strong> for Emir, so I moved to a pyramid.</p>
       <a class="link" href="assets/failures/ncc_crop_too_long/emir_took_too_long.jpg" target="_blank" rel="noopener">Open cropped NCC result (slow) ↗</a>
       <img src="assets/failures/ncc_crop_too_long/emir_took_too_long.jpg" alt="emir NCC cropped but slow" style="width:100%;display:block;margin-top:8px">
     </div>
@@ -410,7 +399,7 @@
         <li>$p_5,p_{95}$ — 5th and 95th percentile values per channel.</li>
         <li>$\varepsilon$ — very small stabilizer to avoid divide by zero in NCC.</li>
       </ul>
-      <p><strong>Why these formulas?</strong> L2 highlights raw pixel error but is brightness sensitive. NCC normalizes out brightness and contrast. Gray-world assumes the average scene is gray and balances channels. Percentile contrast expands midtones while clipping outliers.</p>
+      <p><strong>Why these formulas?</strong> Edge maps compare structure (changes) rather than raw brightness, so cross-channel illumination differences affect the score far less while true edges align strongly. L2 highlights raw pixel error but is brightness sensitive. NCC normalizes out brightness and contrast. Gray-world assumes the average scene is gray and balances channels. Percentile contrast expands midtones while clipping outliers.</p>
     </div>
   </section>
 
