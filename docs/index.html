@@ -366,11 +366,23 @@
     </div>
   </section>
 
-  <!-- BASELINE GALLERY -->
-  <section class="card">
-    <h2>Baseline gallery — all 14</h2>
-    <div class="gallery" id="baselineGallery"></div>
-  </section>
+<!-- BASELINE GALLERY (split into two parts) -->
+<section class="card">
+  <h2>Baseline gallery</h2>
+  <p class="note">
+    <strong>Part 1.</strong> Brute-force single-scale using <em>L2</em> and <em>NCC</em> (no pyramid) — shown for
+    <code>cathedral</code>, <code>monastery</code>, and <code>tobolsk</code>.<br>
+    <strong>Part 2.</strong> Multi-scale alignment <em>with</em> multiscale pyramids for all remaining images.
+    <br><br>
+    (Everything else on the page — comparisons, timings, formulas, and analysis — remains unchanged.)
+  </p>
+
+  <h3>Part 1 — Brute force (L2 / NCC)</h3>
+  <div class="gallery" id="baselineP1"></div>
+
+  <h3>Part 2 — Single-scale alignment (no pyramid)</h3>
+  <div class="gallery" id="baselineP2"></div>
+</section>
 
   <!-- 14 COMPARISONS -->
   <section class="card">
@@ -605,7 +617,17 @@ function fillGallery(containerId, srcMap){
     el.appendChild(card);
   });
 }
-fillGallery('baselineGallery', BASELINE_SRC);
+// --- Split baseline gallery into Part 1 and Part 2 ---
+const PART1_KEYS = ['cathedral','monastery','tobolsk'];
+const P1_SRC = Object.fromEntries(PART1_KEYS.map(k => [k, BASELINE_SRC[k]]));
+const P2_SRC = Object.fromEntries(
+  Object.keys(BASELINE_SRC)
+    .filter(k => !PART1_KEYS.includes(k))
+    .map(k => [k, BASELINE_SRC[k]])
+);
+
+fillGallery('baselineP1', P1_SRC);   // Part 1: cathedral, monastery, tobolsk
+fillGallery('baselineP2', P2_SRC);   // Part 2: all remaining images
 fillGallery('finalGallery', ALL_SRC);
 
 /* 14 comparisons */
@@ -653,8 +675,6 @@ updateStoryboard('emir');
 </script>
 
 <script>
-
-  
   // Paste the names of extra files (shared basenames with suffixes stripped)
   const EXTRA_KEYS = [
     "master-pnp-prok-00100-00128u",
@@ -666,7 +686,19 @@ updateStoryboard('emir');
     "master-pnp-prok-01000-01043u",
     "master-pnp-prok-01000-01047u"
   ];
-  
+
+  // Human-readable titles for the EXTRA_KEYS above
+  const EXTRA_TITLES = {
+    "master-pnp-prok-00300-00384u": "Grave of Tuchkova and her son in a church she built in Spaso-Borodinskii Monastery. Borodino",
+    "master-pnp-prok-00800-00841u": "Iconostasis in Trinity Cathedral in the city of Ialutorovsk",
+    "master-pnp-prok-00800-00854u": "Church of the Holy Mother of God",
+    "master-pnp-prok-00900-00952u": "Drawbridge on the Vytegra River.",
+    "master-pnp-prok-00900-00998u": "Altar image in the Church of John the Theologian",
+    "master-pnp-prok-01000-01043u": "Peasant girls.",
+    "master-pnp-prok-01000-01047u": "Some of the Tsar's gifts",
+    "master-pnp-prok-00100-00128u": "Religious painting"
+  };
+
   // Build correct paths for the EXTRA folders (don’t touch ALL_SRC/BASELINE_SRC)
   function extraPaths(name){
     return {
@@ -674,17 +706,19 @@ updateStoryboard('emir');
       after:  `assets/all_extra/all/${name}_all.jpg`
     };
   }
-  
+
   (function fillExtraCompare(){
     const container = document.getElementById('extraCompare');
     if(!container) return;
     EXTRA_KEYS.forEach(name => {
       const {before, after} = extraPaths(name);
-      const card = makeBA(before, after, name);
+      const title = EXTRA_TITLES[name] || name;   // fall back to basename if missing
+      const card = makeBA(before, after, title);
       container.appendChild(card);
     });
   })();
-  </script>
+</script>
+
   
   
 </body>
