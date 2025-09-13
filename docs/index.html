@@ -201,16 +201,62 @@
   </section>
 
   <!-- EMIR PROGRESSION -->
+
+
   <section class="card tight">
     <h2>Working out <code>emir.tif</code> step by step</h2>
 
-    <div class="frame fail card">
-      <h3>1) L2 on full frames</h3>
-      <p>I started with a brute-force single scale using the L2 metric
-        (<a href="#formulaRef">see formula reference ↗</a>). L2 compares raw intensity differences and is very sensitive to bright borders and cross-channel brightness. The best score landed at the wrong shift and color fringes appeared. With no search window or pyramid, the full TIF brute force took about <strong>55 minutes</strong> for Emir.</p>
-      <a class="link" href="assets/failures/emir__fail_metric_L2_nocrop.jpg" target="_blank" rel="noopener">Open full image ↗</a>
-      <img src="assets/failures/emir__fail_metric_L2_nocrop.jpg" alt="emir L2 full-frame failure" style="width:100%;display:block;margin-top:8px">
-    </div>
+    <!-- 0: Raw brightness only (no edge map) -->
+<div class="frame fail card">
+  <h3>0) Raw brightness only — compare intensities directly</h3>
+  <p>
+    I started by comparing <em>raw brightness</em> between channels (no edge map). In code terms, this is the path where
+    the scoring operates directly on the images without gradients:
+    <code>is_grad = false</code> in <code>the_way_of_pyramids</code>, so
+    <code>im_to_score1 = curr_img1</code> and <code>im_to_score2 = curr_img2</code> before scoring.
+  </p>
+  <p class="note">
+    <strong>Problem:</strong> cross-channel brightness differs a lot in <code>emir.tif</code>. Comparing raw intensities lets illumination/border effects
+    dominate the score, so the alignment drifts and produces heavy color fringing.
+  </p>
+  <a class="link" href="assets/failures/emir_no_edge_detector.jpg" target="_blank" rel="noopener">Open full image ↗</a>
+  <img src="assets/failures/emir_no_edge_detector.jpg"
+       alt="emir brightness-only (no edge map)"
+       style="width:100%;display:block;margin-top:8px">
+</div>
+
+<div class="frame fail card">
+  <h3>1) Edge differentiator (central differences) vs. raw brightness, then L2 on full frames</h3>
+
+  <!-- New: explain the edge differentiator first -->
+  <p>
+    To avoid brightness pulling the score (Card 0), I built an <strong>edge differentiator</strong>:
+    instead of comparing intensities, I compare <em>changes</em> in intensity. For each image I compute a
+    central-difference edge map
+    \(E(x,y)=\sqrt{G_x(x,y)^2+G_y(x,y)^2}\) where
+    \(G_x(x,y)=\tfrac{1}{2}\big(I(x+1,y)-I(x-1,y)\big)\) and
+    \(G_y(x,y)=\tfrac{1}{2}\big(I(x,y+1)-I(x,y-1)\big)\).
+    This matches the code path when <code>is_grad = true</code> in <code>the_way_of_pyramids</code>:
+    <code>im_to_score1 = edge_differentiator(curr_img1)</code>,
+    <code>im_to_score2 = edge_differentiator(curr_img2)</code>.
+  </p>
+  <p class="note">
+    <strong>Why it’s different from Card 0:</strong> Card 0 compared raw brightness; the edge differentiator compares
+    <em>structure</em> (gradients). Cross-channel illumination differences cancel much better in gradient space, so true
+    edges (outlines, texture) drive the alignment.
+  </p>
+
+
+  <p>
+    I also tried a brute-force single scale using the <strong>L2</strong> metric
+    (<a href="#formulaRef">see formula reference ↗</a>). L2 compares raw intensity differences and is very sensitive to
+    bright borders and cross-channel brightness. The best score landed at the wrong shift and color fringes appeared.
+    With no search window or pyramid, the full TIF brute force took about <strong>55 minutes</strong> for Emir.
+  </p>
+  <a class="link" href="assets/failures/emir__fail_metric_L2_nocrop.jpg" target="_blank" rel="noopener">Open full image ↗</a>
+  <img src="assets/failures/emir__fail_metric_L2_nocrop.jpg" alt="emir L2 full-frame failure" style="width:100%;display:block;margin-top:8px">
+</div>
+
 
     <div class="frame fail card">
       <h3>2) Overcrop with L2</h3>
@@ -290,8 +336,23 @@
 
   <!-- METHODS QUICK REFERENCE -->
   <section class="card tight" id="formulaRef">
+    
     <h2>Methods in formulas (quick reference)</h2>
+    
+
     <div class="note">
+
+      <p><strong>Edge map (central differences).</strong></p>
+    
+    <div>
+      \[
+        \begin{aligned}
+        G_x(x,y) &= \tfrac{1}{2}\big(I(x+1,y) - I(x-1,y)\big),\\
+        G_y(x,y) &= \tfrac{1}{2}\big(I(x,y+1) - I(x,y-1)\big),\\[4pt]
+        E(x,y) &= \sqrt{\,G_x(x,y)^2 + G_y(x,y)^2\,}.
+        \end{aligned}
+      \]
+    </div>
       <p><strong>L2 distance.</strong></p>
       <div>
         \[
@@ -328,6 +389,8 @@
     <div class="note" style="margin-top:14px">
       <h3 style="margin-top:0">What the symbols mean</h3>
       <ul>
+        <li>$G_x,G_y$ — central-difference gradients (horizontal/vertical rate of change).</li>
+<li>$E$ — edge-magnitude map used as input when <code>is\_grad=true</code>.</li>
         <li>$A,B$ — two image channels being compared (e.g. Blue vs Red).</li>
         <li>$\Omega$ — cropped interior region (borders excluded).</li>
         <li>$\bar A,\bar B$ — mean intensity of each channel.</li>
@@ -404,21 +467,17 @@
       Library of Congress Prokudin-Gorskii collection
     </a>.
     Drag the handle on each to compare my baseline alignment vs. the version with white balance &amp; contrast.
+    
   </p>
+
+  <p class="note" style="margin-bottom:10px">
+    Click on any image to view it in full size.
+  </p>
+  <div class="gallery" id="extraCompare"></div>
+
   <div class="gallery" id="extraCompare"></div>
 </section>
 
-<!-- EXTRA IMAGES (Library of Congress) -->
-<section class="card">
-  <h2>Additional images from the Library of Congress</h2>
-  <p class="note">
-    These are extra plates I ran my code on, sourced from the
-    <a class="link" href="https://www.loc.gov/collections/prokudin-gorskii/" target="_blank" rel="noopener">
-      Library of Congress Prokudin-Gorskii collection
-    </a>. Drag the handle to compare <em>baseline</em> (left) vs <em>white balance + contrast</em> (right).
-  </p>
-  <div class="gallery" id="extraCompare"></div>
-</section>
 
 </main>
 
@@ -673,8 +732,66 @@ storyPick.addEventListener('change', e=> updateStoryboard(e.target.value));
 updateStoryboard('emir');
 </script>
 
+<style>
+  /* Only affect the extra images section */
+  #extraCompare .ba-footer span {
+    display: flex;              /* put title + offsets on same flex line */
+    flex-direction: column;     /* stack neatly without extra gaps */
+    line-height: 1.25;          /* tighten vertical spacing */
+    margin: 0;                  /* remove any default spacing */
+  }
+  #extraCompare .ba-footer strong {
+    margin-bottom: 2px;         /* small gap between title and offsets */
+  }
+  #extraCompare .ba-footer small,
+  #extraCompare .ba-footer .meta {
+    font-size: 12px;
+    opacity: 0.85;
+    margin: 0;
+  }
+</style>
+
+<style id="extra-inline-overlay-style">
+  #extraCompare .frame{ margin:0; overflow:hidden; }
+  #extraCompare .media{
+    position:relative; display:block; margin:0; line-height:0; 
+    overflow:hidden; border-radius:inherit;   /* match card corners */
+  }
+  #extraCompare .media img{ display:block; width:100%; height:auto; }
+
+  /* FULL-WIDTH bottom bar for offsets */
+  #extraCompare .media::after{
+    content: attr(data-offset);
+    position:absolute; left:0; right:0; bottom:0;        /* stretch to edges */
+    padding:10px 12px; font-size:12px; line-height:1.2;
+    background: rgba(0,0,0,.6);
+    color:#fff; box-sizing:border-box;
+    border-bottom-left-radius: inherit;                   /* rounded bottom */
+    border-bottom-right-radius: inherit;
+    pointer-events:none; white-space:nowrap; 
+    overflow:hidden; text-overflow:ellipsis;
+  }
+
+  /* (optional) keep footer tight */
+  #extraCompare .ba-footer{ margin:0; }
+</style>
+
+<style>
+  /* compact info row for extra images only */
+  #extraCompare .meta-bar{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:6px 10px; background:#f6efe2; border-top:1px solid var(--frame);
+    line-height:1.2;
+  }
+  #extraCompare .meta-bar .title{ font-weight:700; }
+  #extraCompare .meta-bar .offs{ font-size:12px; opacity:.85; margin-left:8px; }
+  #extraCompare .meta-bar a{ font-size:13px; }
+</style>
+
+
+
+
 <script>
-  // Paste the names of extra files (shared basenames with suffixes stripped)
   const EXTRA_KEYS = [
     "master-pnp-prok-00100-00128u",
     "master-pnp-prok-00300-00384u",
@@ -686,19 +803,28 @@ updateStoryboard('emir');
     "master-pnp-prok-01000-01047u"
   ];
 
-  // Human-readable titles for the EXTRA_KEYS above
   const EXTRA_TITLES = {
+    "master-pnp-prok-00100-00128u": "Religious painting",
     "master-pnp-prok-00300-00384u": "Grave of Tuchkova and her son in a church she built in Spaso-Borodinskii Monastery. Borodino",
     "master-pnp-prok-00800-00841u": "Iconostasis in Trinity Cathedral in the city of Ialutorovsk",
-    "master-pnp-prok-00800-00854u": "Church of the Holy Mother of God",
+    "master-pnp-prok-00800-00854u": "Church of the Holy Mother of God (from other side). [Tobolsk]",
     "master-pnp-prok-00900-00952u": "Drawbridge on the Vytegra River.",
     "master-pnp-prok-00900-00998u": "Altar image in the Church of John the Theologian",
     "master-pnp-prok-01000-01043u": "Peasant girls.",
-    "master-pnp-prok-01000-01047u": "Some of the Tsar's gifts",
-    "master-pnp-prok-00100-00128u": "Religious painting"
+    "master-pnp-prok-01000-01047u": "Some of the Tsar's gifts"
   };
 
-  // Build correct paths for the EXTRA folders (don’t touch ALL_SRC/BASELINE_SRC)
+  const EXTRA_OFFSETS = {
+    "master-pnp-prok-00100-00128u": { g:[25, 35],  r:[38, 51]  },
+    "master-pnp-prok-00300-00384u": { g:[-4, 59],  r:[-17, 122]},
+    "master-pnp-prok-00800-00841u": { g:[1, 40],   r:[-1, 110] },
+    "master-pnp-prok-00800-00854u": { g:[37, 15],  r:[-760, -597]},
+    "master-pnp-prok-00900-00952u": { g:[-18, 26], r:[-37, 77] },
+    "master-pnp-prok-00900-00998u": { g:[16, 20],  r:[192, -674]},
+    "master-pnp-prok-01000-01043u": { g:[10, -16], r:[18, 11]  },
+    "master-pnp-prok-01000-01047u": { g:[20, 24],  r:[33, 71]  }
+  };
+
   function extraPaths(name){
     return {
       before: `assets/baseline_extra/baseline/${name}_baseline.jpg`,
@@ -711,14 +837,39 @@ updateStoryboard('emir');
     if(!container) return;
     EXTRA_KEYS.forEach(name => {
       const {before, after} = extraPaths(name);
-      const title = EXTRA_TITLES[name] || name;   // fall back to basename if missing
-      const card = makeBA(before, after, title);
+      const title = EXTRA_TITLES[name] || name;
+      const o = EXTRA_OFFSETS[name];
+      const offs = o ? `Offsets — G→B (${o.g[0]}, ${o.g[1]}), R→B (${o.r[0]}, ${o.r[1]})` : "";
+
+      const card = document.createElement('div');
+      card.className = 'frame';
+
+      const fig = document.createElement('figure');
+      fig.className = 'ba'; fig.style.setProperty('--pos','50%');
+      fig.innerHTML = `
+        <a href="${after}" target="_blank" rel="noopener">
+          <img class="left" src="${before}" alt="">
+          <img class="right" src="${after}" alt="">
+        </a>
+        <div class="divider"></div><div class="handle">↔</div>
+        <div class="overlay">
+          <div class="tag left">Before: baseline</div>
+          <div class="tag right">+extras</div>
+        </div>`;
+      wireBA(fig);
+
+      const meta = document.createElement('div');
+      meta.style.padding = "8px 10px";
+      meta.innerHTML = `<strong>${title}</strong><br><span style="font-size:12px;opacity:.85">${offs}</span>`;
+
+      card.appendChild(fig);
+      card.appendChild(meta);
       container.appendChild(card);
     });
   })();
 </script>
 
-  
+
   
 </body>
 </html>
