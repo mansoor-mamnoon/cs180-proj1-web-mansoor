@@ -225,26 +225,38 @@
        style="width:100%;display:block;margin-top:8px">
 </div>
 
-<div class="frame fail card">
-  <h3>1) Edge differentiator (central differences) vs. raw brightness, then L2 on full frames</h3>
-
-  <!-- New: explain the edge differentiator first -->
+<div class="frame card fail">
+  <h3>1) Edge differentiator vs. raw brightness</h3>
   <p>
-    To avoid brightness pulling the score (Card 0), I built an <strong>edge differentiator</strong>:
-    instead of comparing intensities, I compare <em>changes</em> in intensity. For each image I compute a
-    central-difference edge map
-    \(E(x,y)=\sqrt{G_x(x,y)^2+G_y(x,y)^2}\) where
-    \(G_x(x,y)=\tfrac{1}{2}\big(I(x+1,y)-I(x-1,y)\big)\) and
-    \(G_y(x,y)=\tfrac{1}{2}\big(I(x,y+1)-I(x,y-1)\big)\).
-    This matches the code path when <code>is_grad = true</code> in <code>the_way_of_pyramids</code>:
-    <code>im_to_score1 = edge_differentiator(curr_img1)</code>,
-    <code>im_to_score2 = edge_differentiator(curr_img2)</code>.
+    In Card 0 I compared <em>raw pixel brightness</em> with an L2 score. That failed because
+    different channels can have very different overall illumination, so brightness alone isn’t reliable.
   </p>
-  <p class="note">
-    <strong>Why it’s different from Card 0:</strong> Card 0 compared raw brightness; the edge differentiator compares
-    <em>structure</em> (gradients). Cross-channel illumination differences cancel much better in gradient space, so true
-    edges (outlines, texture) drive the alignment.
+  <p>
+    To fix that, I built an <strong>edge differentiator</strong>. Instead of comparing intensities,
+    it compares <em>changes</em> in intensity: essentially, looking at where edges (outlines, textures,
+    object boundaries) appear in each channel. The result is called an <strong>edge map</strong>:
+    a grayscale image that highlights only the edges of structures. Alignment now follows edges
+    instead of being distracted by brightness differences across channels.
   </p>
+  <div class="note">
+    <p><strong>Why it’s different from Card 0:</strong> Card 0 only looked at raw brightness values.
+      The edge map ignores global illumination differences, so structures (like outlines and textures)
+      line up much more reliably.</p>
+  </div>
+  <p>
+    The exact central-difference formula for the edge map is shown in the
+    <a href="#formulaRef">methods reference below</a>, but at a high level it’s just measuring how
+    quickly intensities change in the x- and y-directions and combining them.
+  </p>
+  <p>
+    I also tested a brute-force single scale with the L2 metric. It was still dominated by bright
+    borders and produced wrong shifts with color fringes. On the full Emir TIF, brute force took
+    about <strong>55 minutes</strong>.
+  </p>
+  <a class="link" href="assets/failures/emir__fail_metric_L2_nocrop.jpg" target="_blank" rel="noopener">Open full image ↗</a>
+  <img src="assets/failures/emir__fail_metric_L2_nocrop.jpg" alt="emir L2 full-frame failure" style="width:100%;display:block;margin-top:8px">
+</div>
+
 
 
   <p>
