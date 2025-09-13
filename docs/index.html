@@ -147,6 +147,22 @@
 
 <main class="wrap">
 
+  <!-- PROJECT OVERVIEW (body) -->
+<section class="card">
+  <h2>Project overview</h2>
+  <p>
+    In the early 1900s, <strong>Sergei Mikhailovich Prokudin-Gorskii</strong> traveled across the Russian Empire,
+    photographing each scene with three sequential exposures through <em>blue</em>, <em>green</em>, and <em>red</em> filters.
+    The Library of Congress later digitized these glass-plate negatives.
+  </p>
+  <p>
+    My pipeline splits each scan into B/G/R thirds, <strong>aligns G and R to B</strong> (single-scale NCC for small images and a
+    <strong>coarse-to-fine pyramid</strong> for large TIFs), then stacks them into RGB. Finally I apply
+    <strong>gray-world white balance</strong> and a <strong>5–95% percentile contrast stretch</strong>.
+    Metrics are computed on an interior crop to avoid border bias.
+  </p>
+</section>
+
   <!-- HERO -->
   <section class="card hero-grid">
     <div>
@@ -367,6 +383,31 @@
     <h2>Gallery after all features</h2>
     <div class="gallery" id="finalGallery"></div>
   </section>
+
+  <!-- EXTRA IMAGES (END OF PAGE) -->
+<section class="card">
+  <h2>Additional images from the Library of Congress</h2>
+  <p class="note">
+    These are extra plates I ran my code on, sourced from the
+    <a class="link" href="https://www.loc.gov/collections/prokudin-gorskii/" target="_blank" rel="noopener">
+      Library of Congress Prokudin-Gorskii collection
+    </a>.
+    Drag the handle on each to compare my baseline alignment vs. the version with white balance &amp; contrast.
+  </p>
+  <div class="gallery" id="extraCompare"></div>
+</section>
+
+<!-- EXTRA IMAGES (Library of Congress) -->
+<section class="card">
+  <h2>Additional images from the Library of Congress</h2>
+  <p class="note">
+    These are extra plates I ran my code on, sourced from the
+    <a class="link" href="https://www.loc.gov/collections/prokudin-gorskii/" target="_blank" rel="noopener">
+      Library of Congress Prokudin-Gorskii collection
+    </a>. Drag the handle to compare <em>baseline</em> (left) vs <em>white balance + contrast</em> (right).
+  </p>
+  <div class="gallery" id="extraCompare"></div>
+</section>
 
 </main>
 
@@ -610,5 +651,41 @@ function updateStoryboard(key){
 storyPick.addEventListener('change', e=> updateStoryboard(e.target.value));
 updateStoryboard('emir');
 </script>
+
+<script>
+
+  
+  // Paste the names of extra files (shared basenames with suffixes stripped)
+  const EXTRA_KEYS = [
+    "master-pnp-prok-00100-00128u",
+    "master-pnp-prok-00300-00384u",
+    "master-pnp-prok-00800-00841u",
+    "master-pnp-prok-00800-00854u",
+    "master-pnp-prok-00900-00952u",
+    "master-pnp-prok-00900-00998u",
+    "master-pnp-prok-01000-01043u",
+    "master-pnp-prok-01000-01047u"
+  ];
+  
+  // Build correct paths for the EXTRA folders (don’t touch ALL_SRC/BASELINE_SRC)
+  function extraPaths(name){
+    return {
+      before: `assets/baseline_extra/baseline/${name}_baseline.jpg`,
+      after:  `assets/all_extra/all/${name}_all.jpg`
+    };
+  }
+  
+  (function fillExtraCompare(){
+    const container = document.getElementById('extraCompare');
+    if(!container) return;
+    EXTRA_KEYS.forEach(name => {
+      const {before, after} = extraPaths(name);
+      const card = makeBA(before, after, name);
+      container.appendChild(card);
+    });
+  })();
+  </script>
+  
+  
 </body>
 </html>
